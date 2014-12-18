@@ -1,0 +1,137 @@
+<html>
+<head>
+    <title>D3</title>
+    <script src="d3.min.js" type="text/javascript"></script>
+</head>
+<body>
+    Charts
+    <script type="text/javascript">
+        var w = 400;
+        var h = 300;
+        var padding = 2;
+        var marginTop = 15;
+        var dataset = [4, 5, 8, 10, 4, 2, 5, 6, 20];
+        var max = Math.max.apply(null, dataset);
+        var crytical = max * 0.8;
+
+        var svg = d3.select("body")
+        .append("svg")
+        .attr("width", w)
+        .attr("height", h);
+
+        svg.selectAll("rect")
+        .data(dataset)
+        .enter()
+        .append("rect")
+        .attr(
+        {
+            x: function (d, i) { return i * (w / dataset.length); },
+            y: function (d) { return h - d * h / max; },
+            height: function (d) { return d * h / max; },
+            width: function (d) { return w / dataset.length - padding },
+            fill: function (d) { return d < crytical ? "rgb(80,80,80)" : "rgb(200,80,80)"; }
+        });
+
+        svg.selectAll("text")
+        .data(dataset)
+        .enter()
+        .append("text")
+        .text(function (d) { return d; })
+        .attr(
+        {
+            x: function (d, i) { return (i + 0.5) * (w / dataset.length); },
+            y: function (d) { return h - d * h / max + 20; },
+            "font-family": "sans-serif",
+            "fill": "white",
+            "text-anchor": "middle"
+        });
+
+        // LINE CHART //
+        d3.json("/height.json", function (error, data) {
+            if (error) {
+                console.log(error);
+                return;
+            }
+
+            var timeHeight = data;
+            console.log(timeHeight);
+            var maxTime = 1;
+            var maxHeight = 1;
+            var averageHeight = 0;
+
+            for (var i = 0; i < timeHeight.length; i++) {
+                if (timeHeight[i].time > maxTime) maxTime = timeHeight[i].time;
+                if (timeHeight[i].height > maxHeight) maxHeight = timeHeight[i].height;
+                averageHeight += timeHeight[i].height;
+            }
+
+            averageHeight /= timeHeight.length;
+
+            var xzoom = w / maxTime;
+            var yzoom = h / maxHeight;
+
+            var line = d3.svg.line()
+            .x(function (d) { return xzoom * d.time; })
+            .y(function (d) { return h - (yzoom * d.height); })
+            .interpolate("cardinal");
+
+            svg = d3.select("body")
+            .append("svg")
+            .attr({
+                width: w,
+                height: h
+            });
+
+            var lineChart = svg.append("path")
+            .attr({
+                d: line(timeHeight),
+                "stroke": "rgb(200, 80, 80)",
+                "stroke-width": 2,
+                "fill": "none"
+            });
+
+
+            // add labels
+            var labels = svg.selectAll("text")
+            .data(timeHeight)
+            .enter()
+            .append("text")
+            .text(function (d) { return d.height })
+            .attr({
+                x: function (d, i) { return xzoom * d.time; },
+                y: function (d, i) { return h - (yzoom * d.height) + 15; },
+                "font-family": "sans-serif",
+                "font-size": "10pt",
+                "font-weight": function (d, i) {
+                    return 100 * Math.floor(d.height / maxHeight * 9);
+                }
+            });
+
+            // add dots
+            var dots = svg.selectAll("circle")
+            .data(timeHeight)
+            .enter()
+            .append("circle")
+            .attr({
+                fill: function (d) { return d.height > 10 ? "#66CCEE" : "#888888" },
+                cx: function (d) { return xzoom * d.time; },
+                cy: function (d) { return h - (yzoom * d.height); },
+                r: 5
+            });
+
+            // add summary
+            var table = d3.select("body")
+            .append("table");
+
+            var metrics = ["Max height: " + maxHeight, "Avearage height: " + averageHeight];
+
+            table.selectAll("tr")
+            .data(metrics)
+            .enter()
+            .append("tr")
+            .append("td")
+            .text(function (d) { return d; });
+        });
+    </script>
+</body>
+</html>
